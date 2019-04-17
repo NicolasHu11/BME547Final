@@ -103,9 +103,22 @@ def query_user_metrics(username):
     return metrics
 
 
-def upload_images(username, raw_img, pro_img):
+def save_a_new_request(username, request_id, r):
+    """
+    r(dict): everything needed for Requests Class
+    """
+    r_class = Requests(
+                       uploaded = r['uploaded'],
+                       processed = r['processed'],
+                       img_format = r['img_format'],
+                       time_uploaded = r['time_uploaded'],
+                       time_to_process = r['time_to_process'],
+                       img_size = r['img_size'],
+                       procedure = r['procedure'],
+                       filename = r['filename']
+            )
     user = query_user(username)
-    user.last_image_uploaded = raw_img  # save as the last image
-    user.images.append(Images(raw_img,pro_img))
+    user.request_id.append(request_id)
+    user.requests.append(r_class)
     user.save()
     pass
