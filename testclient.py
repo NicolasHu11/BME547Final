@@ -46,8 +46,9 @@ def remote_filter_display(base64_string):
     j = {'username': 'test001',
          'num_img': 1,
          'imgs': [base64_string],
-         'processing': 'histogram_eq',
-         'img_format': 'JPG'
+         'procedure': 'histogram_eq',
+         'img_format': 'JPG',
+         'filename': 'airplane001.jpg'
          }
     address = "http://localhost:5000"
     r = requests.post(address + "/api/process_img", json=j)
@@ -74,6 +75,7 @@ if __name__ == '__main__':
 
     # print(img_b64_string)
     # img = decode_b64(img_b64_string, 'JPG')
+    # print(img.shape[0], img.shape[1])
     # reencoded_b64 = encode_b64(img)
     # print(reencoded_b64)
     # local_load_filter_display(reencoded_b64)
