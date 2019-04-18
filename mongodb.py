@@ -113,6 +113,8 @@ def save_a_new_request(username, request_id, r):
                        procedure = r['procedure'],
                        filename = r['filename']
             )
+
+    create_new_user(username)
     user = query_user(username)
     user.request_id.append(request_id)
     user.requests.append(r_class)
