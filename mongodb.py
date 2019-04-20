@@ -7,25 +7,20 @@ connect("mongodb+srv://bme547:bme547_@cluster0-htwfk.mongodb.net/547")
 
 
 # database module
-# actions
-class Actions(EmbeddedMongoModel):
-    actions = fields.ListField()
-    processing_types = fields.ListField(blank=True)
-    timestamps = fields.TimestampField(blank=True)
-    processing_time = fields.IntegerField(blank=True)
-    image_size = fields.IntegerField(blank=True)
-
-# images
-class Images(EmbeddedMongoModel):
+# database module
+# Requests
+class Requests(EmbeddedMongoModel):
     """
 
     """
-    images_uploaded = fields.CharField()  
-    images_processed = fields.CharField()
-    images_format = fields.CharField(blank=True)
-    images_procedures = fields.ListField(blank=True)
-    
-
+    uploaded = fields.ListField(blank=True)  # list of strs
+    processed = fields.ListField(blank=True)  # list of strs
+    img_format = fields.CharField(blank=True)  # str
+    time_uploaded = fields.CharField(blank=True)  # a str
+    time_to_process = fields.CharField(blank=True)  # a str
+    img_size = fields.ListField(blank=True)  # list of tuples. Mongodb does not have tuple
+    procedure = fields.CharField(blank=True)  # ONE str. one procedure each time
+    filename = fields.ListField(blank=True)  # list of filenames
 
 # User
 class User(MongoModel):  # this means a collection in db
@@ -34,10 +29,11 @@ class User(MongoModel):  # this means a collection in db
     # metrics
     num_actions = fields.IntegerField(blank=True)
     last_image_uploaded = fields.CharField(blank=True)
-    request_id = fields.CharField(blank=True)
+    request_id = fields.ListField(blank=True)  # a list of str or int
+    
     # embedded documents
-    images = fields.EmbeddedDocumentListField(Images)
-    actions = fields.EmbeddedDocumentListField(Actions)
+    requests = fields.EmbeddedDocumentListField(Requests)
+    
 
 
 def query_user(username):
@@ -103,9 +99,30 @@ def query_user_metrics(username):
     return metrics
 
 
-def upload_images(username, raw_img, pro_img):
+def save_a_new_request(username, request_id, r):
+    """
+    r(dict): everything needed for Requests Class
+    """
+    r_class = Requests(
+                       uploaded = r['uploaded'],
+                       processed = r['processed'],
+                       img_format = r['img_format'],
+                       time_uploaded = r['time_uploaded'],
+                       time_to_process = r['time_to_process'],
+                       img_size = r['img_size'],
+                       procedure = r['procedure'],
+                       filename = r['filename']
+            )
+
+    create_new_user(username)
     user = query_user(username)
-    user.last_image_uploaded = raw_img  # save as the last image
-    user.images.append(Images(raw_img,pro_img))
+    user.request_id.append(request_id)
+    user.requests.append(r_class)
     user.save()
     pass
+
+
+def query_by_request_id(username, request_id):
+    user = query_user(username)
+    index = user.request_id.index(request_id)
+    return user.requests[index]
