@@ -43,21 +43,22 @@ def process_img_handler():
     # calculate histogram for that image
     # Store data to db
     new_id = generate_request_id()
-    store_new_request(r, new_id, list_of_processed_imgs_encoded, time_received)
+    print('New request id is {}'.format(new_id))
+    # store_new_request(r, new_id, list_of_processed_imgs_encoded, time_received)
     # assemble return data
-    data = {'request_id': '1',
+    data = {'request_id': new_id,
             'processed_img': list_of_processed_imgs_encoded,
             'histograms': []}
     return jsonify(data), 200
 
 # needs work
 
-
+num_requests = 0
 def generate_request_id():
-    # print(num_requests)
-    # new_id = str(num_requests)
-    # num_requests += 1
-    return '1'
+    global num_requests
+    new_id = str(num_requests)
+    num_requests += 1
+    return num_requests
 
 
 def decode_b64(base64_string, img_format):
@@ -83,9 +84,21 @@ def retrieve_request_handler(username, request_id):
 
 @app.route("/api/previous_request/<username>", methods=["GET"])
 def previous_request_handler(username):
+    from mongodb import query_field, query_by_request_id
     # Query db for data
+    request_id = query_field(username, 'request_id')
+    data = {}
+    for id in request_id:
+        request_file = query_by_request_id(username, id)
+
+        data[id] = {
+                'filename': request_file.filename,
+                'procedure': request_file.procedure,
+                'upload time': request_file.time_uploaded
+        }
+
     # return data
-    pass
+    return jsonify(data), 200
 
 
 @app.route("/api/user_metrics/<username>", methods=["GET"])
@@ -125,6 +138,7 @@ def store_new_request(r, request_id, list_of_processed_imgs_encoded, time_receiv
         'procedure': r['procedure'],
         'filename': r['filename']
     }
+    print('')
     from mongodb import save_a_new_request
     save_a_new_request(r['username'], request_id, db_data)
 
