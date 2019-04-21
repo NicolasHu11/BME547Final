@@ -80,9 +80,9 @@ if __name__ == '__main__':
     # reencoded_b64 = encode_b64(img)
     # print(reencoded_b64)
     # local_load_filter_display(reencoded_b64)
-    # remote_filter_display(img_b64_string)
+    remote_filter_display(img_b64_string)
     # hist_equal_filter(img_b64_string)
     # save_b64_image(b64_string)
 
     # This section tests get requests
-    view_past_requests('test001')
+    # view_past_requests('test001')

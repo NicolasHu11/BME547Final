@@ -5,11 +5,13 @@ from skimage.util import invert
 import base64
 import io
 import datetime
+import numpy as np
 
 app = Flask(__name__)
 error_messages = {1: 'Please put post request json in correct format',
                   2: 'Incorrect data types in request',
-                  3: 'Username or request id does not exist'}
+                  3: 'Username does not exist',
+                  4: 'Request ID does not exist'}
 procedure_choices = ['histogram_eq', 'contrast_str', 'log_compress', 'reverse_vid']
 img_format_choices = ['JPG', 'JPEG', 'PNG', 'TIFF']
 num_requests = 1
@@ -30,6 +32,7 @@ def process_img_handler():
         decoded_img = decode_b64(base64_string, r['img_format'])
         list_of_decoded_imgs.append(decoded_img)
     # process individual image
+    # print(r['procedure'])
     list_of_processed_imgs = process_imgs_with_method(list_of_decoded_imgs, r['procedure'])
     # encode image before sending it back
     list_of_processed_imgs_encoded = []
@@ -57,10 +60,11 @@ def process_imgs_with_method(list_of_decoded_imgs, procedure):
             p2, p98 = np.percentile(before_filtering, (2, 98))
             processed = exposure.rescale_intensity(before_filtering, in_range=(p2, p98))
         elif procedure == 'log_compress':
-            pass
+            processed = exposure.adjust_log(before_filtering)
         else:
             processed = invert(before_filtering)
         list_of_processed_imgs.append(processed)
+    return list_of_processed_imgs
 
 num_requests = 0
 def generate_request_id():
@@ -103,6 +107,8 @@ def previous_request_handler(username):
     from mongodb import query_field, query_by_request_id
     # Query db for data
     request_id = query_field(username, 'request_id')
+    if request_id == 0:
+        return jsonify(error_messages[3]), 400
     data = {}
     for id in request_id:
         request_file = query_by_request_id(username, id)
