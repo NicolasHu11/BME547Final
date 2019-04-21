@@ -93,6 +93,10 @@ def retrieve_request_handler(username, request_id):
     # Query db given username and request id
     from mongodb import query_by_request_id
     request_file = query_by_request_id(username, request_id)
+    if request_file == 0:
+        return jsonify(error_messages[3]), 400
+    elif request_file == 1:
+        return jsonify(error_messages[4]), 400
     data = {
         'original_img': request_file.uploaded,
         'processed_img': request_file.processed,
