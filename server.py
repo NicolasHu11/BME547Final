@@ -26,7 +26,7 @@ def process_img_handler():
     list_of_decoded_imgs = []
     for base64_string in r['imgs']:
         # Image format should be passed along the request. I hard coded JPG
-        decoded_img = decode_b64(base64_string, 'JPG')
+        decoded_img = decode_b64(base64_string, r['img_format'])
         list_of_decoded_imgs.append(decoded_img)
     # process individual image
     list_of_processed_imgs = []
@@ -78,8 +78,15 @@ def encode_b64(image):
 @app.route("/api/retrieve_request/<username>/<request_id>", methods=["GET"])
 def retrieve_request_handler(username, request_id):
     # Query db given username and request id
+    from mongodb import query_by_request_id
+    request_file = query_by_request_id(username, request_id)
+    data = {
+        'original_img': request_file.uploaded,
+        'processed_img': request_file.processed,
+        'histograms': []
+    }
     # return data
-    pass
+    return jsonify(data), 200
 
 
 @app.route("/api/previous_request/<username>", methods=["GET"])
