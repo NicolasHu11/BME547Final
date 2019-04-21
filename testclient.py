@@ -5,8 +5,7 @@ import matplotlib.image as mpimg
 from skimage import exposure
 from skimage import data, img_as_float
 import requests
-
-
+address = "http://localhost:5000"
 def read_file_as_b64(image_path):
     with open(image_path, "rb") as image_file:
         b64_bytes = base64.b64encode(image_file.read())
@@ -50,7 +49,6 @@ def remote_filter_display(base64_string):
          'img_format': 'JPG',
          'filename': 'airplane001.jpg'
          }
-    address = "http://localhost:5000"
     r = requests.post(address + "/api/process_img", json=j)
     print(r.text)
     r = r.json()
@@ -68,6 +66,9 @@ def encode_b64(image):
     b64_bytes = base64.b64encode(image_buf.read())
     return str(b64_bytes, encoding='utf-8')
 
+def view_past_requests(username):
+    r = requests.get(address + "/api/previous_request/" + username)
+    print(r.json())
 
 if __name__ == '__main__':
     img_b64_string = read_file_as_b64("./images/airplane001.jpg")
@@ -79,6 +80,9 @@ if __name__ == '__main__':
     # reencoded_b64 = encode_b64(img)
     # print(reencoded_b64)
     # local_load_filter_display(reencoded_b64)
-    remote_filter_display(img_b64_string)
+    # remote_filter_display(img_b64_string)
     # hist_equal_filter(img_b64_string)
     # save_b64_image(b64_string)
+
+    # This section tests get requests
+    view_past_requests('test001')
