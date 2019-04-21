@@ -1,14 +1,17 @@
 from flask import Flask, jsonify, request
 import matplotlib.image as mpimg
 from skimage import exposure
+from skimage.util import invert
 import base64
 import io
 import datetime
+import numpy as np
 
 app = Flask(__name__)
 error_messages = {1: 'Please put post request json in correct format',
                   2: 'Incorrect data types in request',
-                  3: 'Username or request id does not exist'}
+                  3: 'Username does not exist',
+                  4: 'Request ID does not exist'}
 procedure_choices = ['histogram_eq', 'contrast_str', 'log_compress', 'reverse_vid']
 img_format_choices = ['JPG', 'JPEG', 'PNG', 'TIFF']
 num_requests = 1
@@ -29,11 +32,8 @@ def process_img_handler():
         decoded_img = decode_b64(base64_string, r['img_format'])
         list_of_decoded_imgs.append(decoded_img)
     # process individual image
-    list_of_processed_imgs = []
-    for before_filtering in list_of_decoded_imgs:
-        # Only support equalize_hist for now
-        processed = exposure.equalize_hist(before_filtering)
-        list_of_processed_imgs.append(processed)
+    # print(r['procedure'])
+    list_of_processed_imgs = process_imgs_with_method(list_of_decoded_imgs, r['procedure'])
     # encode image before sending it back
     list_of_processed_imgs_encoded = []
     for before_encoding in list_of_processed_imgs:
@@ -51,7 +51,20 @@ def process_img_handler():
             'histograms': []}
     return jsonify(data), 200
 
-# needs work
+def process_imgs_with_method(list_of_decoded_imgs, procedure):
+    list_of_processed_imgs = []
+    for before_filtering in list_of_decoded_imgs:
+        if procedure == 'histogram_eq':
+            processed = exposure.equalize_hist(before_filtering)
+        elif procedure == 'contrast_str':
+            p2, p98 = np.percentile(before_filtering, (2, 98))
+            processed = exposure.rescale_intensity(before_filtering, in_range=(p2, p98))
+        elif procedure == 'log_compress':
+            processed = exposure.adjust_log(before_filtering)
+        else:
+            processed = invert(before_filtering)
+        list_of_processed_imgs.append(processed)
+    return list_of_processed_imgs
 
 num_requests = 0
 def generate_request_id():
@@ -80,6 +93,10 @@ def retrieve_request_handler(username, request_id):
     # Query db given username and request id
     from mongodb import query_by_request_id
     request_file = query_by_request_id(username, request_id)
+    if request_file == 0:
+        return jsonify(error_messages[3]), 400
+    elif request_file == 1:
+        return jsonify(error_messages[4]), 400
     data = {
         'original_img': request_file.uploaded,
         'processed_img': request_file.processed,
@@ -94,6 +111,8 @@ def previous_request_handler(username):
     from mongodb import query_field, query_by_request_id
     # Query db for data
     request_id = query_field(username, 'request_id')
+    if request_id == 0:
+        return jsonify(error_messages[3]), 400
     data = {}
     for id in request_id:
         request_file = query_by_request_id(username, id)
