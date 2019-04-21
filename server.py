@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 import matplotlib.image as mpimg
 from skimage import exposure
+from skimage.util import invert
 import base64
 import io
 import datetime
@@ -29,11 +30,7 @@ def process_img_handler():
         decoded_img = decode_b64(base64_string, r['img_format'])
         list_of_decoded_imgs.append(decoded_img)
     # process individual image
-    list_of_processed_imgs = []
-    for before_filtering in list_of_decoded_imgs:
-        # Only support equalize_hist for now
-        processed = exposure.equalize_hist(before_filtering)
-        list_of_processed_imgs.append(processed)
+    list_of_processed_imgs = process_imgs_with_method(list_of_decoded_imgs, r['procedure'])
     # encode image before sending it back
     list_of_processed_imgs_encoded = []
     for before_encoding in list_of_processed_imgs:
@@ -51,7 +48,19 @@ def process_img_handler():
             'histograms': []}
     return jsonify(data), 200
 
-# needs work
+def process_imgs_with_method(list_of_decoded_imgs, procedure):
+    list_of_processed_imgs = []
+    for before_filtering in list_of_decoded_imgs:
+        if procedure == 'histogram_eq':
+            processed = exposure.equalize_hist(before_filtering)
+        elif procedure == 'contrast_str':
+            p2, p98 = np.percentile(before_filtering, (2, 98))
+            processed = exposure.rescale_intensity(before_filtering, in_range=(p2, p98))
+        elif procedure == 'log_compress':
+            pass
+        else:
+            processed = invert(before_filtering)
+        list_of_processed_imgs.append(processed)
 
 num_requests = 0
 def generate_request_id():
