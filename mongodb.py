@@ -73,12 +73,19 @@ def query_field(username, field):
         (type depends): one field in for given user
 
     """
-    return getattr(query_user(username), field)
+    try:
+        user = query_user(username)
+        return getattr(user, field)
+    except:
+        return 0  # user does not exist, return 0
 
 
 def update_field(username, field, value):
     """not inclduing Images and Actions, value could be None"""
-    user = query_user(username)
+    try:
+        user = query_user(username)
+    except:
+        return 0  # user does not exist, return 0
 
     old_value = getattr(user, field)
     if isinstance(old_value, list):
@@ -123,6 +130,13 @@ def save_a_new_request(username, request_id, r):
 
 
 def query_by_request_id(username, request_id):
-    user = query_user(username)
-    index = user.request_id.index(request_id)
-    return user.requests[index]
+    try:
+        user = query_user(username)
+    except:
+        return 0  # user does not exist, return 0
+
+    try:
+        index = user.request_id.index(request_id)
+        return user.requests[index]
+    except ValueError:
+        return 1 # request_id does not exist.
