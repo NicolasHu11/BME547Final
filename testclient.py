@@ -45,7 +45,7 @@ def remote_filter_display(base64_string):
     j = {'username': 'test001',
          'num_img': 1,
          'imgs': [base64_string],
-         'procedure': 'histogram_eq',
+         'procedure': 'reverse_vid',
          'img_format': 'JPG',
          'filename': 'airplane001.jpg'
          }
@@ -70,6 +70,20 @@ def view_past_requests(username):
     r = requests.get(address + "/api/previous_request/" + username)
     print(r.json())
 
+def retrieve_past_request(username, request_id):
+    r = requests.get(address + "/api/retrieve_request/" + username + '/' + request_id)
+    r = r.json()
+    originals = r['original_img']
+    processed = r['processed_img']
+    for i in range(len(originals)):
+        fig, ax = plt.subplots(1, 2)
+        img = decode_b64(originals[i], 'JPG')
+        after_filtering = decode_b64(processed[i], 'JPG')
+        ax[0].imshow(img)
+        ax[1].imshow(after_filtering)
+        plt.show()
+
+
 if __name__ == '__main__':
     img_b64_string = read_file_as_b64("./images/airplane001.jpg")
     # local_load_filter_display(img_b64_string)
@@ -79,10 +93,11 @@ if __name__ == '__main__':
     # print(img.shape[0], img.shape[1])
     # reencoded_b64 = encode_b64(img)
     # print(reencoded_b64)
-    # local_load_filter_display(reencoded_b64)
-    remote_filter_display(img_b64_string)
+    # local_load_filter_display(img_b64_string)
+    # remote_filter_display(img_b64_string)
     # hist_equal_filter(img_b64_string)
     # save_b64_image(b64_string)
 
     # This section tests get requests
-    # view_past_requests('test001')
+    # view_past_requests('test002222')
+    # retrieve_past_request('test001', '4')

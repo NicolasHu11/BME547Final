@@ -44,11 +44,15 @@ def process_img_handler():
     # Store data to db
     new_id = generate_request_id()
     print('New request id is {}'.format(new_id))
-    # store_new_request(r, new_id, list_of_processed_imgs_encoded, time_received)
+    metadata = store_new_request(r, new_id, list_of_processed_imgs_encoded, time_received)
     # assemble return data
     data = {'request_id': new_id,
             'processed_img': list_of_processed_imgs_encoded,
-            'histograms': []}
+            'histograms': [],
+            'time_uploaded': metadata['time_uploaded'],
+            'time_to_process': metadata['time_to_process'],
+            'img_size': metadata['img_size']
+            }
     return jsonify(data), 200
 
 def process_imgs_with_method(list_of_decoded_imgs, procedure):
@@ -71,7 +75,7 @@ def generate_request_id():
     global num_requests
     new_id = str(num_requests)
     num_requests += 1
-    return num_requests
+    return str(num_requests)
 
 
 def decode_b64(base64_string, img_format):
@@ -114,6 +118,7 @@ def previous_request_handler(username):
     if request_id == 0:
         return jsonify(error_messages[3]), 400
     data = {}
+    print(request_id)
     for id in request_id:
         request_file = query_by_request_id(username, id)
 
@@ -167,7 +172,7 @@ def store_new_request(r, request_id, list_of_processed_imgs_encoded, time_receiv
     print('')
     from mongodb import save_a_new_request
     save_a_new_request(r['username'], request_id, db_data)
-
+    return db_data
 
 def get_img_sizes(list_of_processed_imgs_encoded, img_format):
     img_sizes = []
