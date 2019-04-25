@@ -1,55 +1,140 @@
 from tkinter import *
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from tkinter import filedialog as fd
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
+from zipfile import ZipFile
+import matplotlib.image as mpimg
 import requests
+import base64
+import os
+
 app = Flask(__name__)
+address = "http://localhost:5000"
 
 
 def window_layout():
-    t_upload = None
-    t_process = None
-    image_size = None
-    original_histogram = None
-    processed_histogram = None
+    global o_img, p_img
+    o_img = None
+    p_img = None
+
+    def get_user_metric():
+        user_name = id_entry.get()
+        if user_name == '':
+            messagebox.showinfo('Error', 'Please enter your user name.')
+        # r = requests.get()
+        # user_metric = r.json()
+        return None
 
     def select_file():
-        filename = fd.askopenfilename()
-        if filename != '':
-            selected_label.config(text='File selected: {}'.format(filename))
+        file_name = fd.askopenfilename()
+        if file_name != '':
+            selected_label.config(text='{}'.format(file_name))
         return None
 
     def select_request():
-        username = id_entry.get()
-        # pre_request = requests.get('http://example.com/{}'.format(username))
-        pre_request = ['request 1', 'request 2', 'request 3']
-        open_req_cb['value'] = pre_request
+        user_name = id_entry.get()
+        r = requests.get(address + "/api/previous_request/" +
+                                   user_name)
+        pre_request = r.json()
+        if type(pre_request) == dict:
+            open_req_cb['value'] = pre_request
+        else:
+            messagebox.showinfo('Error', pre_request)
+        return None
+
+    def unzip_encode_img():
+        file_name = selected_label.cget('text')
+        file_format = file_name.split(".")[-1]
+        if file_format != 'zip':
+            img_num = 1
+            with open(file_name, "rb") as image_file:
+                img_b64b = base64.b64encode(image_file.read())
+            img = str(img_b64b, encoding='utf-8')
+            print(img)
+        else:
+            img = []
+            with ZipFile(file_name, 'r') as zip_file:
+                file_list = zip_file.namelist()
+            img_num = len(file_list)
+            for i in range(img_num):
+                with open(file_name, "rb") as image_file:
+                    img_b64b = base64.b64encode(image_file.read())
+                img.append(str(img_b64b, encoding='utf-8'))
+        return img_num, file_format, img
+
+    def show_time(r_dict):
+        # show only the info for the first image if a bunch is uploaded
+        t_upload = r_dict['Time upload'][0]
+        t_process = r_dict['Time to process'][0]
+        img_size = r_dict['Image size'][0]
+        t_up_label.config(text='Time uploaded: {}'.format(t_upload))
+        t_pr_label.config(text='Time to process: {}'.format(t_process))
+        img_size_label.config(text='Image size: {}*{}'.format(img_size[0],
+                                                              img_size[1]))
+
+    def show_hist(r_dict):
+        o_hist = r_dict['Original histogram'][0]
+        p_hist = r_dict['Processed histogram'][0]
+        o_hist_label.config(image=o_hist)
+        p_hist_label.config(image=p_hist)
+
+    def start_p():
+        global o_img, p_img
+        img_num, file_format, img = unzip_encode_img()
+        p_dict = {'filename': selected_label.cget('text'),
+                  'imgs': img,
+                  'username': id_entry.get(),
+                  'num_img': img_num,
+                  'procedure': p_method,
+                  'img_format': file_format}
+        r = requests.post(address + "/api/process_img", json=jsonify(p_dict))
+        result = r.json()
+        if type(result) == dict:
+            show_time(result)
+            show_hist(result)
+            o_img = result['Original image']
+            p_img = result['Processed image']
+        else:
+            messagebox.showinfo('Error', result)
         return None
 
     def combo_callback(self):
-        requestname = open_req_cb.get()
-        selected_label.config(text='Request selected: {}'.format(requestname))
-
+        global o_img, p_img
+        request_name = open_req_cb.get()
+        selected_label.config(text='{}'.format(request_name))
+        p_dict = {['request_number']: selected_label.cget('text'),
+                  ['user_name']: id_entry.get()}
+        r = requests.post("http://example.com/", json=jsonify(p_dict))
+        result = r.json()
+        show_time(result)
+        show_hist(result)
+        o_img = result['Original image']
+        p_img = result['Processed image']
         return None
-
-    def start_p(filename, username, num_img, procedure, fileformat):
-        """
-        Args:
-            filename: list containing strings of the file name
-            username: string containing the user name
-            num_img:
-            procedure:
-            fileformat: string containing the format of the file(s)
-        Returns:
-            json: the client json file for POST
-        """
-        pass
 
     def display_img():
         pass
 
-    def download_image():
+    def download_image(dl_format):
         pass
+        '''global p_img
+        os.mkdir('./Img')
+        download_path = r'./Img'
+        img_num = len(p_img)
+        if img_num > 1:
+            os.mkdir('./temp/')
+            file_path = r'./temp/'
+            zip_file = ZipFile(download_path, 'w')
+            for i in range(img_num):
+                with open("./temp/Img{}.{}".format(i, dl_format), "wb") as \
+                        download_img:
+                    download_img.write()
+                zip_file.write(file_path, "Img{}.{}".format(i, dl_format))
+            zip_file.close()
+            os.remove(file_path)
+        else:
+            with open("./temp/Img.{}".format(dl_format), "wb") as download_img:
+                download_img.write()'''
 
     root = Tk()
     root.title('BME547 - Image Processing')
@@ -60,6 +145,9 @@ def window_layout():
     id_label.grid(column=0, row=row_1)
     id_entry = ttk.Entry(root)
     id_entry.grid(column=1, row=row_1)
+    user_info_btn = ttk.Button(root, text='Get my processing history',
+                               command=get_user_metric)
+    user_info_btn.grid(column=2, row=row_1)
 
     # Select action
     row_2 = row_1 + 1
@@ -104,18 +192,17 @@ def window_layout():
     result_label = ttk.Label(root, text='4. Result')
     result_label.grid(column=0, row=row_4, sticky=W)
 
-    t_up_label = ttk.Label(root, text='Time uploaded: {}'.format(t_upload))
+    t_up_label = ttk.Label(root, text='Time uploaded:')
     t_up_label.grid(column=0, row=row_4+1, columnspan=2, sticky=W)
-    t_pr_label = ttk.Label(root, text='Time to process: {}'.format(t_process))
+    t_pr_label = ttk.Label(root, text='Time to process:')
     t_pr_label.grid(column=2, row=row_4+1, columnspan=2, sticky=W)
-    imsize_label = ttk.Label(root, text='Image size: {}'.format(image_size))
-    imsize_label.grid(column=4, row=row_4+1, columnspan=2, sticky=W)
-
-    o_hist_label = ttk.Label(root, text='Original Histogram',
-                             image=original_histogram)
+    img_size_label = ttk.Label(root, text='Image size:')
+    img_size_label.grid(column=4, row=row_4+1, columnspan=2, sticky=W)
+    histimg = PhotoImage('IMG_2051.gif')
+    o_hist_label = ttk.Label(root, text='Original Histogram', image=histimg,
+                             compound='center')
     o_hist_label.grid(column=0, row=row_4+2, columnspan=2, rowspan=2)
-    p_hist_label = ttk.Label(root, text='Processed Histogram',
-                             image=processed_histogram)
+    p_hist_label = ttk.Label(root, text='Processed Histogram', image=None)
     p_hist_label.grid(column=2, row=row_4+2, columnspan=2, rowspan=2)
     disp_btn = ttk.Button(root, text='Display and compare', command=display_img)
     disp_btn.grid(column=4, row=row_4+3)
@@ -138,7 +225,8 @@ def window_layout():
                                value='tiff')
     tiff_btn.grid(column=3, row=row_5+1, sticky=W)
 
-    d_btn = ttk.Button(root, text='Download', command=download_image)
+    d_btn = ttk.Button(root, text='Download', command=download_image(
+        d_format))
     d_btn.grid(column=4, row=row_5+1)
 
     root.mainloop()
@@ -146,4 +234,5 @@ def window_layout():
 
 
 if __name__ == "__main__":
-    window_layout()
+    # window_layout()
+    pass
