@@ -4,6 +4,8 @@ from tkinter import filedialog as fd
 from flask import Flask, jsonify
 from zipfile import ZipFile
 from PIL import Image, ImageTk
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import requests
 import base64
@@ -106,7 +108,7 @@ def window_layout():
     def start_p():
         global o_img, p_img
         img_num, file_format, img = unzip_encode_img()
-        '''p_dict = {'filename': selected_label.cget('text'),
+        p_dict = {'filename': selected_label.cget('text'),
                   'imgs': img,
                   'username': id_entry.get(),
                   'num_img': img_num,
@@ -120,7 +122,7 @@ def window_layout():
             o_img = result['Original image']
             p_img = result['Processed image']
         else:
-            messagebox.showinfo('Error', result)'''
+            messagebox.showinfo('Error', result)
         return None
 
     def combo_callback(self):
