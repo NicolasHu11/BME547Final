@@ -41,6 +41,8 @@ def process_img_handler():
         list_of_processed_imgs_encoded.append(b64_string)
     # convert to desired format
     # calculate histogram for that image
+    original_histograms = get_histograms(list_of_decoded_imgs)
+    processed_histograms = get_histograms(list_of_processed_imgs)
     # Store data to db
     new_id = generate_request_id()
     print('New request id is {}'.format(new_id))
@@ -48,7 +50,8 @@ def process_img_handler():
     # assemble return data
     data = {'request_id': new_id,
             'processed_img': list_of_processed_imgs_encoded,
-            'histograms': [],
+            'original_histograms': original_histograms,
+            'processed_histograms': processed_histograms,
             'time_uploaded': metadata['time_uploaded'],
             'time_to_process': metadata['time_to_process'],
             'img_size': metadata['img_size']
@@ -101,10 +104,13 @@ def retrieve_request_handler(username, request_id):
         return jsonify(error_messages[3]), 400
     elif request_file == 1:
         return jsonify(error_messages[4]), 400
+    original_histograms = get_histograms(request_file.uploaded)
+    processed_histograms = get_histograms(request_file.processed)
     data = {
         'original_img': request_file.uploaded,
         'processed_img': request_file.processed,
-        'histograms': [],
+        'original_histograms': original_histograms,
+        'processed_histograms': processed_histograms,
         'filename': request_file.filename,
         'procedure': request_file.procedure,
         'time_uploaded': request_file.time_uploaded,
@@ -211,6 +217,13 @@ def get_img_sizes(list_of_processed_imgs_encoded, img_format):
         new_tuple = (decoded_img.shape[0], decoded_img.shape[1])
         img_sizes.append(new_tuple)
     return img_sizes
+
+def get_histograms(img_list):
+    hist_list = []
+    for img in img_list:
+        hist, bins = exposure.histogram(img)
+        hist_list.append((bins.tolist(), hist.tolist()))
+    return hist_list
 
 
 if __name__ == '__main__':

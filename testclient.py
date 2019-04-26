@@ -35,14 +35,17 @@ def hist_equal_filter(before_filtering):
 def local_load_filter_display(base64_string):
     img = decode_b64(base64_string, 'JPG')
     after_filtering = hist_equal_filter(img)
-    fig, ax = plt.subplots(1, 2)
-    ax[0].imshow(img)
-    ax[1].imshow(after_filtering)
+    fig, ax = plt.subplots(2, 2)
+    ax[0,0].imshow(img)
+    ax[0,1].imshow(after_filtering)
+    img_hist, img_bins = exposure.histogram(after_filtering)
+    ax[1,0].plot(img_bins, img_hist)
     plt.show()
+    print()
 
 
 def remote_filter_display(base64_string):
-    j = {'username': 'test001',
+    j = {'username': 'test003',
          'num_img': 1,
          'imgs': [base64_string],
          'procedure': 'reverse_vid',
@@ -50,13 +53,19 @@ def remote_filter_display(base64_string):
          'filename': 'airplane001.jpg'
          }
     r = requests.post(address + "/api/process_img", json=j)
-    print(r.text)
+    # print(r.text)
     r = r.json()
     imgs = r['processed_img']
-    for i in imgs:
-        decoded_img = decode_b64(i, 'JPG')
-        plt.imshow(decoded_img)
-        plt.show()
+    original_img = decode_b64(base64_string, 'JPG')
+    decoded_img = decode_b64(imgs[0], 'JPG')
+    figure, ax = plt.subplots(2,2)
+    original_histograms = r['original_histograms'][0]
+    processed_histograms = r['processed_histograms'][0]
+    ax[0,0].imshow(original_img)
+    ax[0,1].imshow(decoded_img)
+    ax[1,0].plot(original_histograms[0], original_histograms[1])
+    ax[1,1].plot(processed_histograms[0], processed_histograms[1])
+    plt.show()
 
 
 def encode_b64(image):
@@ -94,7 +103,7 @@ if __name__ == '__main__':
     # reencoded_b64 = encode_b64(img)
     # print(reencoded_b64)
     # local_load_filter_display(img_b64_string)
-    # remote_filter_display(img_b64_string)
+    remote_filter_display(img_b64_string)
     # hist_equal_filter(img_b64_string)
     # save_b64_image(b64_string)
 
