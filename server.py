@@ -112,31 +112,45 @@ def retrieve_request_handler(username, request_id):
 
 @app.route("/api/previous_request/<username>", methods=["GET"])
 def previous_request_handler(username):
-    from mongodb import query_field, query_by_request_id
-    # Query db for data
-    request_id = query_field(username, 'request_id')
-    if request_id == 0:
+    user_exists = validate_previous_request(username)
+    if not user_exists:
         return jsonify(error_messages[3]), 400
+    previous_request_ids = get_previous_requests(username)
+    data = previous_request_preview(previous_request_ids)
+    # return data
+    return jsonify(data), 200
+
+def previous_request_preview(previous_request_ids):
+    from mongodb import query_by_request_id
     data = {}
-    print(request_id)
     for id in request_id:
         request_file = query_by_request_id(username, id)
 
         data[id] = {
                 'filename': request_file.filename,
                 'procedure': request_file.procedure,
-                'upload time': request_file.time_uploaded
+                'time_uploaded': request_file.time_uploaded,
+                'time_to_process': request_file.time_to_process,
+                'img_size': request_file.img_size
         }
+    return data
 
-    # return data
-    return jsonify(data), 200
-
+def get_previous_requests(username):
+    from mongodb import query_field
+    request_id_list = query_field(username, 'request_id')
+    print(request_id_list)
+    return request_id_list
 
 @app.route("/api/user_metrics/<username>", methods=["GET"])
 def user_metrics_handler(username):
     # query db for user user metrics
     # return data
     pass
+
+def validate_previous_request(username):
+    from mongodb import check_user
+    user_exists = check_user(username)
+    return user_exists
 
 
 def validate_process_img(r):
