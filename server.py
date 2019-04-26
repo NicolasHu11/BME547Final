@@ -104,7 +104,12 @@ def retrieve_request_handler(username, request_id):
     data = {
         'original_img': request_file.uploaded,
         'processed_img': request_file.processed,
-        'histograms': []
+        'histograms': [],
+        'filename': request_file.filename,
+        'procedure': request_file.procedure,
+        'time_uploaded': request_file.time_uploaded,
+        'time_to_process': request_file.time_to_process,
+        'img_size': request_file.img_size
     }
     # return data
     return jsonify(data), 200
@@ -143,15 +148,26 @@ def get_previous_requests(username):
 
 @app.route("/api/user_metrics/<username>", methods=["GET"])
 def user_metrics_handler(username):
+    user_exists = validate_previous_request(username)
+    if not user_exists:
+        return jsonify(error_messages[3]), 400
     # query db for user user metrics
+    metrics = get_user_metrics(username)
+    num_actions = metrics[0]
+    user_creation_time = metrics[1]
+    data = {'num_actions': num_actions,
+            'user_creation_time': user_creation_time
+    }
     # return data
-    pass
+    return jsonify(data), 200
 
 def validate_previous_request(username):
     from mongodb import check_user
     user_exists = check_user(username)
     return user_exists
-
+def get_user_metrics(username):
+    from mongodb import query_user_metrics
+    metrics = query_user_metrics(username)
 
 def validate_process_img(r):
     try:
