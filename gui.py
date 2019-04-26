@@ -89,13 +89,13 @@ def window_layout():
                                                               img_size[1]))
 
     def show_hist(r_dict):
-        o_hist = r_dict['Original histogram']
+        o_hist = r_dict['original_histograms']
         o_hist = o_hist[0] if type(o_hist) == list else o_hist
         o_hist = Image.open(decode_img(o_hist))
         o_hist = ImageTk.PhotoImage(o_hist.resize((250, 200)))
         o_hist_canv.create_image(125, 100, image=o_hist)
         o_hist_canv.create_text(70, 20, text='Original Histogram')
-        p_hist = r_dict['Processed histogram']
+        p_hist = r_dict['processed_histograms']
         p_hist = p_hist[0] if type(p_hist) == list else p_hist
         p_hist = Image.open(decode_img(p_hist))
         p_hist = ImageTk.PhotoImage(p_hist.resize((250, 200)))
