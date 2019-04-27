@@ -74,7 +74,7 @@ def window_layout():
         o_hist_canv.create_image(125, 100, image=o_img)
         o_hist_canv.create_text(70, 20, text='Original Histogram')
         root.mainloop()
-        return img_num, file_format, img
+        return img_num, file_format, [img]
 
     def decode_img(img):
         img = io.BytesIO(base64.b64decode(img))
@@ -114,7 +114,7 @@ def window_layout():
                   'num_img': img_num,
                   'procedure': p_method,
                   'img_format': file_format}
-        r = requests.post(address + "/api/process_img", json=jsonify(p_dict))
+        r = requests.post(address + "/api/process_img", json=p_dict)
         result = r.json()
         if type(result) == dict:
             show_time(result)
