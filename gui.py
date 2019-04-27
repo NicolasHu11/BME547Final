@@ -4,7 +4,11 @@ from tkinter import filedialog as fd
 from flask import Flask, jsonify
 from zipfile import ZipFile
 from PIL import Image, ImageTk
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib import figure
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+import matplotlib.backends.tkagg as tkagg
 import requests
 import base64
 import io
@@ -46,13 +50,14 @@ def window_layout():
     def unzip_encode_img():
         file_path = selected_label.cget('text')
         file_format = file_path.split('.')[-1]
+        img = []
         if file_format != 'zip':
             img_num = 1
             with open(file_path, 'rb') as image_file:
                 img_b64b = base64.b64encode(image_file.read())
-            img = str(img_b64b, encoding='utf-8')
+            img.append(str(img_b64b, encoding='utf-8'))
         else:
-            img = []
+
             with ZipFile(file_path, 'r') as zip_file:
                 file_list = zip_file.namelist()
             img_num = len(file_list)
@@ -64,14 +69,24 @@ def window_layout():
                 with open(file_name, 'rb') as image_file:
                     img_b64b = base64.b64encode(image_file.read())
                 img.append(str(img_b64b, encoding='utf-8'))
-        img = img[0] if type(img) == list else img
+        fig = mpl.figure.Figure(figsize=(2, 1))
+        ax = fig.add_axes([0, 0, 1, 1])
+        # ax.plot(o_hist[0], o_hist[1])
+        ax.plot([0, 1, 2], [10, 9, 8])
+        figure_canvas_agg = FigureCanvasAgg(fig)
+        figure_canvas_agg.draw()
+        photo = ImageTk.PhotoImage(master=o_hist_canv)
+        tkagg.blit(photo, figure_canvas_agg.get_renderer()._renderer,
+                   colormode=2)
+        o_hist_canv.create_image(125, 100, image=photo)
+        '''img = img[0] if type(img) == list else img
         hist_img = Image.open(decode_img(img))
         hist_img = ImageTk.PhotoImage(hist_img.resize((250, 200)))
         global o_img
         o_img = hist_img
         o_hist_canv.create_image(125, 100, image=o_img)
         o_hist_canv.create_text(70, 20, text='Original Histogram')
-        root.mainloop()
+        root.mainloop()'''
         return img_num, file_format, img
 
     def decode_img(img):
@@ -89,18 +104,28 @@ def window_layout():
                                                               img_size[1]))
 
     def show_hist(r_dict):
-        o_hist = r_dict['Original histogram']
+        o_hist = r_dict['original_histograms']
         o_hist = o_hist[0] if type(o_hist) == list else o_hist
-        o_hist = Image.open(decode_img(o_hist))
+        '''o_hist = Image.open(decode_img(o_hist))
         o_hist = ImageTk.PhotoImage(o_hist.resize((250, 200)))
+        '''
+        fig = mpl.figure.Figure(figsize=(2, 1))
+        ax = fig.add_axes([0, 0, 1, 1])
+        # ax.plot(o_hist[0], o_hist[1])
+        ax.plot([0, 1, 2], [10, 9, 8])
+        figure_canvas_agg = FigureCanvasAgg(fig)
+        figure_canvas_agg.draw()
+        plt.plot(figure_canvas_agg)
+        plt.imshow()
+        o_hist = ImageTk.PhotoImage(figure_canvas_agg)
         o_hist_canv.create_image(125, 100, image=o_hist)
         o_hist_canv.create_text(70, 20, text='Original Histogram')
-        p_hist = r_dict['Processed histogram']
+        '''p_hist = r_dict['processed_histograms']
         p_hist = p_hist[0] if type(p_hist) == list else p_hist
         p_hist = Image.open(decode_img(p_hist))
         p_hist = ImageTk.PhotoImage(p_hist.resize((250, 200)))
         p_hist_canv.create_image(125, 100, image=p_hist)
-        p_hist_canv.create_text(70, 20, text='Processed Histogram')
+        p_hist_canv.create_text(70, 20, text='Processed Histogram')'''
         root.mainloop()
 
     def start_p():
@@ -141,9 +166,9 @@ def window_layout():
     def display_img():
         global o_img, p_img
         # o_img = Image.open(decode_img(o_img))
-        # o_img = ImageTk.PhotoImage(o_img.resize((1600, 900)))
+        # o_img = ImageTk.PhotoImage(o_img.resize((500, 400)))
         # p_img = Image.open(decode_img(p_img))
-        # p_img = ImageTk.PhotoImage(p_img.resize((1600, 900)))
+        # p_img = ImageTk.PhotoImage(p_img.resize((500, 400)))
         disp_window = Toplevel()
         o_img_label = ttk.Label(disp_window, text='Original Image')
         o_img_label.grid(column=0, row=0)
@@ -177,6 +202,7 @@ def window_layout():
         else:
             with open("./temp/Img.{}".format(dl_format), "wb") as download_img:
                 download_img.write()'''
+        return dl_format
 
     root = Tk()
     root.title('BME547 - Image Processing')
