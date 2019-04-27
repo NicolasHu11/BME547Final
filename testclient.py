@@ -58,21 +58,21 @@ def remote_filter_display(base64_string):
     imgs = r['processed_img']
     original_img = decode_b64(base64_string, 'JPG')
     decoded_img = decode_b64(imgs[0], 'JPG')
-    # figure, axes = plt.subplots(3,2)
-    # original_histograms = r['original_histograms'][0]
-    # processed_histograms = r['processed_histograms'][0]
+    figure, axes = plt.subplots(3,2)
+    original_histograms = r['original_histograms'][0]
+    processed_histograms = r['processed_histograms'][0]
     # ax[0,0].imshow(original_img)
     # ax[0,1].imshow(decoded_img)
     # ax[1,0].plot(original_histograms[0], original_histograms[1])
     # ax[1,1].plot(processed_histograms[0], processed_histograms[1])
-    # for c, c_color in enumerate(('red', 'green', 'blue')):
-    #     bins, img_hist = original_histograms[c_color]
-    #     axes[c, 0].plot(bins, img_hist)
-    #     axes[c, 0].set_ylabel(c_color)
-    # for c, c_color in enumerate(('red', 'green', 'blue')):
-    #     bins, img_hist = processed_histograms[c_color]
-    #     axes[c, 1].plot(bins, img_hist)
-    #     axes[0, 1].set_title('Processed')
+    for c, c_color in enumerate(('red', 'green', 'blue')):
+        bins, img_hist = original_histograms[c_color]
+        axes[c, 0].plot(bins, img_hist)
+        axes[c, 0].set_ylabel(c_color)
+    for c, c_color in enumerate(('red', 'green', 'blue')):
+        bins, img_hist = processed_histograms[c_color]
+        axes[c, 1].plot(bins, img_hist)
+        axes[0, 1].set_title('Processed')
     plt.show()
 
 
