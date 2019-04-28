@@ -4,12 +4,14 @@ from tkinter import filedialog as fd
 from flask import Flask
 from zipfile import ZipFile
 from PIL import Image, ImageTk
+import matplotlib as mpl
+mpl.use('TkAgg')
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, \
     NavigationToolbar2Tk
 import matplotlib.pyplot as plt
-import matplotlib as mpl
+
 # import matplotlib.backends.tkagg as tkagg
 import requests
 import base64
@@ -32,7 +34,8 @@ def window_layout():
             messagebox.showinfo('Error', 'Please enter your user name.')
             return
         r = requests.get(address + "/api/user_metrics/" + user_name)
-        user_metric, info_n = r.json()
+        user_metric = r.json()
+        info_n = r.status_code
         if info_n == 200:
             t = user_metric['user_creation_time']
             n = user_metric['num_actions']
@@ -60,13 +63,12 @@ def window_layout():
         r = requests.get(address + "/api/previous_request/" + user_name)
         pre_req = r.json()
         if type(pre_req) == dict:
-            num_req = len(pre_req)
             req_keys = []
-            for i in range(num_req):
-                f_n = pre_req[i]['filename']
-                t_u = pre_req[i]['time_uploaded']
-                p = pre_req[i]['procedure']
-                k = str(i) + ':' + f_n + t_u + p
+            for key, value in pre_req.items():
+                f_n = value['filename']
+                t_u = value['time_uploaded']
+                p = value['procedure']
+                k = key + ':' + f_n + t_u + p
                 req_keys.append(k)
             open_req_cb['value'] = req_keys
         else:
@@ -97,10 +99,9 @@ def window_layout():
                 img.append(str(img_b64b, encoding='utf-8'))
         return img_num, file_format, img
 
-
     def show_time(r_dict):
         t_upload = r_dict['time_uploaded'][0]
-        t_process = r_dict['time_to_process'][0]
+        t_process = r_dict['time_to_process']
         img_size = r_dict['img_size'][0]
         t_up_label.config(text='Time uploaded: {}'.format(t_upload))
         t_pr_label.config(text='Time to process: {}'.format(t_process))
@@ -142,18 +143,19 @@ def window_layout():
         fig_b2.set_title('Blue channel')
         p_plot = FigureCanvasTkAgg(fig_p, root)
         p_plot.draw()
-        p_plot._tkcanvas.grid(column=0, row=row_4 + 2, columnspan=2, rowspan=2)
-        root.mainloop()
+        p_plot._tkcanvas.grid(column=2, row=row_4 + 2, columnspan=2, rowspan=2)
+        # root.mainloop()
 
     def start_p():
         global o_img, p_img
         img_num, file_format, o_img = unzip_encode_img()
-        p_dict = {'filename': selected_label.cget('text'),
+        p_dict = {'filename': selected_label.cget('text').split('/')[-1],
                   'imgs': o_img,
                   'username': id_entry.get(),
                   'num_img': img_num,
-                  'procedure': p_method,
+                  'procedure': p_method.get(),
                   'img_format': file_format}
+        print()
         r = requests.post(address + "/api/process_img", json=p_dict)
         result = r.json()
         if type(result) == dict:
@@ -186,43 +188,46 @@ def window_layout():
         img = ImageTk.PhotoImage(img.resize((500, 300)))
         return img
 
+    def download_image(dl_format):
+        # global p_img
+        # os.mkdir('./Img')
+        # download_path = r'./Img'
+        # img_num = len(p_img)
+        # if img_num > 1:
+        #     os.mkdir('./temp/')
+        #     file_path = r'./temp/'
+        #     zip_file = ZipFile(download_path, 'w')
+        #     for i in range(img_num):
+        #         with open("./temp/Img{}.{}".format(i, dl_format), "wb") as \
+        #                 download_img:
+        #             download_img.write()
+        #         zip_file.write(file_path, "Img{}.{}".format(i, dl_format))
+        #     zip_file.close()
+        #     os.remove(file_path)
+        # else:
+        #     with open("./temp/Img.{}".format(dl_format), "wb") as download_img:
+        #         download_img.write()
+        # return dl_format
+        print('download function')
+        pass
+
     def display_img():
         global o_img, p_img
-        img = decode_resize_img(o_img[0])
-        p_img = decode_resize_img(p_img[0])
+        o_img_first = decode_resize_img(o_img[0])
+        p_img_first = decode_resize_img(p_img[0])
         disp_window = Toplevel()
         o_img_label = ttk.Label(disp_window, text='Original Image')
         o_img_label.grid(column=0, row=0)
         o_img_canv = Canvas(disp_window, bg='white', width=500, height=300)
         o_img_canv.grid(column=0, row=1)
-        o_img_canv.create_image(250, 200, image=img)
+        o_img_canv.create_image(250, 200, image=o_img_first)
         p_img_label = ttk.Label(disp_window, text='Processed Image')
         p_img_label.grid(column=1, row=0)
         p_img_canv = Canvas(disp_window, bg='white', width=500, height=300)
         p_img_canv.grid(column=1, row=1)
-        p_img_canv.create_image(250, 200, image=p_img)
+        p_img_canv.create_image(250, 200, image=p_img_first)
         disp_window.mainloop()
 
-    def download_image(dl_format):
-        global p_img
-        os.mkdir('./Img')
-        download_path = r'./Img'
-        img_num = len(p_img)
-        if img_num > 1:
-            os.mkdir('./temp/')
-            file_path = r'./temp/'
-            zip_file = ZipFile(download_path, 'w')
-            for i in range(img_num):
-                with open("./temp/Img{}.{}".format(i, dl_format), "wb") as \
-                        download_img:
-                    download_img.write()
-                zip_file.write(file_path, "Img{}.{}".format(i, dl_format))
-            zip_file.close()
-            os.remove(file_path)
-        else:
-            with open("./temp/Img.{}".format(dl_format), "wb") as download_img:
-                download_img.write()
-        return dl_format
 
     root = Tk()
     root.title('BME547 - Image Processing')
@@ -317,8 +322,7 @@ def window_layout():
                                value='tiff')
     tiff_btn.grid(column=3, row=row_5+1)
 
-    d_btn = ttk.Button(root, text='Download', command=download_image(
-        d_format))
+    d_btn = ttk.Button(root, text='Download', command=lambda i=d_format: download_image(i))
     d_btn.grid(column=4, row=row_5+1)
 
     root.columnconfigure(0, minsize=170)

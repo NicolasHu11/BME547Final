@@ -14,7 +14,7 @@ error_messages = {1: 'Please put post request json in correct format',
                   3: 'Username does not exist',
                   4: 'Request ID does not exist'}
 procedure_choices = ['histogram_eq', 'contrast_str', 'log_compress', 'reverse_vid']
-img_format_choices = ['JPG', 'JPEG', 'PNG', 'TIFF']
+img_format_choices = ['JPG', 'JPEG', 'PNG', 'TIFF', 'jpg', 'jpeg', 'png', 'tiff']
 num_requests = 1
 
 
@@ -183,8 +183,14 @@ def retrieve_request_handler(username, request_id):
         return jsonify(error_messages[3]), 400
     elif request_file == 1:
         return jsonify(error_messages[4]), 400
-    original_histograms = get_histograms(decode_imgs_from_request(request_file.uploaded))
-    processed_histograms = get_histograms(decode_imgs_from_request(request_file.processed))
+    uploaded_img = []
+    processed_img = []
+    for img in request_file.uploaded:
+        uploaded_img.append(decode_b64(img, 'JPG'))
+    for img in request_file.processed:
+        processed_img.append(decode_b64(img, 'JPG'))
+    original_histograms = get_histograms(uploaded_img)
+    processed_histograms = get_histograms(processed_img)
     data = {
         'original_img': request_file.uploaded,
         'processed_img': request_file.processed,
