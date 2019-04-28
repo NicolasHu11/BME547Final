@@ -215,7 +215,8 @@ def window_layout():
                 mpimg.imsave(file_path + temp_file_name, decoded, format=dl_format.get().upper())
             zip_file = ZipFile(desired_name + '.zip', 'w')
             for i in range(img_num):
-                zip_file.write("./temp/{}.{}".format(i, dl_format.get()))
+                zip_file.write("./temp/{}.{}".format(i, dl_format.get()),
+                               arcname="{}.{}".format(i, dl_format.get()))
             zip_file.close()
             shutil.rmtree(file_path)
         else:
