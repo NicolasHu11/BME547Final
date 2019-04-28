@@ -409,7 +409,6 @@ def get_histograms(img_list):
         histograms = {}
         for c, c_color in enumerate(('red', 'green', 'blue')):
             img_hist, bins = exposure.histogram(img[..., c])
-            print(c_color)
             histograms[c_color] = (bins.tolist(), img_hist.tolist())
         hist_list.append(histograms)
     return hist_list
