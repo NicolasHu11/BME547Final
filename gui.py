@@ -1,15 +1,20 @@
 from tkinter import *
 from tkinter import ttk, messagebox
 from tkinter import filedialog as fd
-from flask import Flask, jsonify
+from flask import Flask
 from zipfile import ZipFile
 from PIL import Image, ImageTk
-import matplotlib
-matplotlib.use('TkAgg')
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib import figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, \
+    NavigationToolbar2Tk
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+# import matplotlib.backends.tkagg as tkagg
 import requests
 import base64
 import io
+import os
 
 
 app = Flask(__name__)
@@ -17,7 +22,7 @@ address = "http://localhost:5000"
 
 
 def window_layout():
-    global o_img, p_img
+    global o_img, p_img, file_upload
     o_img = None
     p_img = None
 
@@ -25,91 +30,126 @@ def window_layout():
         user_name = id_entry.get()
         if user_name == '':
             messagebox.showinfo('Error', 'Please enter your user name.')
-        # r = requests.get()
-        # user_metric = r.json()
+            return
+        r = requests.get(address + "/api/user_metrics/" + user_name)
+        user_metric, info_n = r.json()
+        if info_n == 200:
+            t = user_metric['user_creation_time']
+            n = user_metric['num_actions']
+            messagebox.showinfo('Your Info', 'Time you created account:{} \n '
+                                             'Total actions: {}'.format(t, n))
+        else:
+            messagebox.showinfo('Error', user_metric)
         return None
 
     def select_file():
-        file_name = fd.askopenfilename()
-        if file_name != '':
-            selected_label.config(text='{}'.format(file_name))
+        global file_upload
+        file_upload = list(fd.askopenfilenames())
+        if file_upload:
+            if len(file_upload) == 1:
+                selected_label.config(text='{}'.format(file_upload[0]))
+            else:
+                selected_label.config(text='{} ...'.format(file_upload[0]))
         return None
 
     def select_request():
         user_name = id_entry.get()
+        if user_name == '':
+            messagebox.showinfo('Error', 'Please enter your user name.')
+            return
         r = requests.get(address + "/api/previous_request/" + user_name)
-        pre_request = r.json()
-        if type(pre_request) == dict:
-            open_req_cb['value'] = pre_request
+        pre_req = r.json()
+        if type(pre_req) == dict:
+            num_req = len(pre_req)
+            req_keys = []
+            for i in range(num_req):
+                f_n = pre_req[i]['filename']
+                t_u = pre_req[i]['time_uploaded']
+                p = pre_req[i]['procedure']
+                k = str(i) + ':' + f_n + t_u + p
+                req_keys.append(k)
+            open_req_cb['value'] = req_keys
         else:
-            messagebox.showinfo('Error', pre_request)
+            messagebox.showinfo('Error', pre_req)
         return None
 
     def unzip_encode_img():
-        file_path = selected_label.cget('text')
-        file_format = file_path.split('.')[-1]
+        global file_upload
+        file_format = file_upload[0].split('.')[-1]
+        img = []
         if file_format != 'zip':
-            img_num = 1
-            with open(file_path, 'rb') as image_file:
-                img_b64b = base64.b64encode(image_file.read())
-            img = str(img_b64b, encoding='utf-8')
+            img_num = len(file_upload)
+            for i in range(img_num):
+                with open(file_upload[0], 'rb') as image_file:
+                    img_b64b = base64.b64encode(image_file.read())
+                img.append(str(img_b64b, encoding='utf-8'))
         else:
-            img = []
-            with ZipFile(file_path, 'r') as zip_file:
+            with ZipFile(file_upload[0], 'r') as zip_file:
                 file_list = zip_file.namelist()
             img_num = len(file_list)
             for i in range(1, img_num):
-                file_name = file_path.replace('.zip', '') + '/' + file_list[
-                    i].split('/')[-1]
+                file_name = file_upload[0].replace('.zip', '') + '/' + \
+                            file_list[i].split('/')[-1]
+                print(file_name)
                 file_format = file_name.split('.')[-1]
-                print(file_format)
                 with open(file_name, 'rb') as image_file:
                     img_b64b = base64.b64encode(image_file.read())
                 img.append(str(img_b64b, encoding='utf-8'))
-        img = img[0] if type(img) == list else img
-        hist_img = Image.open(decode_img(img))
-        hist_img = ImageTk.PhotoImage(hist_img.resize((250, 200)))
-        global o_img
-        o_img = hist_img
-        o_hist_canv.create_image(125, 100, image=o_img)
-        o_hist_canv.create_text(70, 20, text='Original Histogram')
-        root.mainloop()
-        return img_num, file_format, [img]
+        return img_num, file_format, img
 
-    def decode_img(img):
-        img = io.BytesIO(base64.b64decode(img))
-        # img = pltimg.imread(image, format='gif')
-        return img
 
     def show_time(r_dict):
-        t_upload = r_dict['Time upload'][0]
-        t_process = r_dict['Time to process'][0]
-        img_size = r_dict['Image size'][0]
+        t_upload = r_dict['time_uploaded'][0]
+        t_process = r_dict['time_to_process'][0]
+        img_size = r_dict['img_size'][0]
         t_up_label.config(text='Time uploaded: {}'.format(t_upload))
         t_pr_label.config(text='Time to process: {}'.format(t_process))
         img_size_label.config(text='Image size: {}*{}'.format(img_size[0],
                                                               img_size[1]))
 
     def show_hist(r_dict):
-        o_hist = r_dict['original_histograms']
-        o_hist = o_hist[0] if type(o_hist) == list else o_hist
-        o_hist = Image.open(decode_img(o_hist))
-        o_hist = ImageTk.PhotoImage(o_hist.resize((250, 200)))
-        o_hist_canv.create_image(125, 100, image=o_hist)
-        o_hist_canv.create_text(70, 20, text='Original Histogram')
-        p_hist = r_dict['processed_histograms']
-        p_hist = p_hist[0] if type(p_hist) == list else p_hist
-        p_hist = Image.open(decode_img(p_hist))
-        p_hist = ImageTk.PhotoImage(p_hist.resize((250, 200)))
-        p_hist_canv.create_image(125, 100, image=p_hist)
-        p_hist_canv.create_text(70, 20, text='Processed Histogram')
+        o_hist = r_dict['original_histograms'][0]
+        fig_o = plt.figure(figsize=(4, 2.4))
+        fig_r1 = plt.subplot(3, 1, 1)
+        fig_r1.plot(o_hist['red'][0], o_hist['red'][1], color='red',
+                    linewidth=2)
+        fig_r1.set_title('Red channel')
+        fig_g1 = plt.subplot(3, 1, 2)
+        fig_g1.plot(o_hist['green'][0], o_hist['green'][1], color='green',
+                    linewidth=2)
+        fig_g1.set_title('Green channel')
+        fig_b1 = plt.subplot(3, 1, 3)
+        fig_b1.plot(o_hist['blue'][0], o_hist['blue'][1], color='blue',
+                    linewidth=2)
+        fig_b1.set_title('Blue channel')
+        o_plot = FigureCanvasTkAgg(fig_o, root)
+        o_plot.draw()
+        o_plot._tkcanvas.grid(column=0, row=row_4 + 2, columnspan=2, rowspan=2)
+
+        p_hist = r_dict['processed_histograms'][0]
+        fig_p = plt.figure(figsize=(4, 2.4))
+        fig_r2 = plt.subplot(3, 1, 1)
+        fig_r2.plot(p_hist['red'][0], p_hist['red'][1], color='red',
+                    linewidth=2)
+        fig_r2.set_title('Red channel')
+        fig_g2 = plt.subplot(3, 1, 2)
+        fig_g2.plot(p_hist['green'][0], p_hist['green'][1], color='green',
+                    linewidth=2)
+        fig_g2.set_title('Green channel')
+        fig_b2 = plt.subplot(3, 1, 3)
+        fig_b2.plot(p_hist['blue'][0], p_hist['blue'][1], color='blue',
+                    linewidth=2)
+        fig_b2.set_title('Blue channel')
+        p_plot = FigureCanvasTkAgg(fig_p, root)
+        p_plot.draw()
+        p_plot._tkcanvas.grid(column=0, row=row_4 + 2, columnspan=2, rowspan=2)
         root.mainloop()
 
     def start_p():
         global o_img, p_img
-        img_num, file_format, img = unzip_encode_img()
+        img_num, file_format, o_img = unzip_encode_img()
         p_dict = {'filename': selected_label.cget('text'),
-                  'imgs': img,
+                  'imgs': o_img,
                   'username': id_entry.get(),
                   'num_img': img_num,
                   'procedure': p_method,
@@ -119,8 +159,7 @@ def window_layout():
         if type(result) == dict:
             show_time(result)
             show_hist(result)
-            o_img = result['Original image']
-            p_img = result['Processed image']
+            p_img = result['processed_img']
         else:
             messagebox.showinfo('Error', result)
         return None
@@ -129,39 +168,43 @@ def window_layout():
         global o_img, p_img
         request_name = open_req_cb.get()
         selected_label.config(text='{}'.format(request_name))
-        request_id = selected_label.cget('text')
+        request_id = selected_label.cget('text').split(':')[0]
         user_name = id_entry.get()
         r = requests.get(
             address + "/api/retrieve_request/" + user_name + '/' + request_id)
         result = r.json()
+        p_method = result['procedure']
+        selected_label.config(text=result['filename'])
         show_time(result)
         show_hist(result)
-        o_img = result['Original image']
-        p_img = result['Processed image']
+        o_img = result['original_img']
+        p_img = result['processed_img']
         return None
+
+    def decode_resize_img(img):
+        img = Image.open(io.BytesIO(base64.b64decode(img)))
+        img = ImageTk.PhotoImage(img.resize((500, 300)))
+        return img
 
     def display_img():
         global o_img, p_img
-        # o_img = Image.open(decode_img(o_img))
-        # o_img = ImageTk.PhotoImage(o_img.resize((1600, 900)))
-        # p_img = Image.open(decode_img(p_img))
-        # p_img = ImageTk.PhotoImage(p_img.resize((1600, 900)))
+        img = decode_resize_img(o_img[0])
+        p_img = decode_resize_img(p_img[0])
         disp_window = Toplevel()
         o_img_label = ttk.Label(disp_window, text='Original Image')
         o_img_label.grid(column=0, row=0)
-        o_img_canv = Canvas(disp_window, bg='white', width=500, height=400)
+        o_img_canv = Canvas(disp_window, bg='white', width=500, height=300)
         o_img_canv.grid(column=0, row=1)
-        o_img_canv.create_image(250, 200, image=o_img)
+        o_img_canv.create_image(250, 200, image=img)
         p_img_label = ttk.Label(disp_window, text='Processed Image')
         p_img_label.grid(column=1, row=0)
-        p_img_canv = Canvas(disp_window, bg='white', width=500, height=400)
+        p_img_canv = Canvas(disp_window, bg='white', width=500, height=300)
         p_img_canv.grid(column=1, row=1)
         p_img_canv.create_image(250, 200, image=p_img)
         disp_window.mainloop()
 
     def download_image(dl_format):
-        pass
-        '''global p_img
+        global p_img
         os.mkdir('./Img')
         download_path = r'./Img'
         img_num = len(p_img)
@@ -178,7 +221,8 @@ def window_layout():
             os.remove(file_path)
         else:
             with open("./temp/Img.{}".format(dl_format), "wb") as download_img:
-                download_img.write()'''
+                download_img.write()
+        return dl_format
 
     root = Tk()
     root.title('BME547 - Image Processing')
@@ -189,7 +233,7 @@ def window_layout():
     id_label.grid(column=0, row=row_1, sticky=W)
     id_entry = ttk.Entry(root)
     id_entry.grid(column=1, row=row_1)
-    user_info_btn = ttk.Button(root, text='Get my processing history',
+    user_info_btn = ttk.Button(root, text='Get my user info',
                                command=get_user_metric)
     user_info_btn.grid(column=2, row=row_1)
 
@@ -198,7 +242,7 @@ def window_layout():
     req_option = StringVar()
     action_label = ttk.Label(root, text='2. Please select an action')
     action_label.grid(column=0, row=row_2, sticky=W)
-    new_file_btn = ttk.Button(root, text='Upload a new file',
+    new_file_btn = ttk.Button(root, text='Upload new file(s)',
                               command=select_file)
     new_file_btn.grid(column=0, row=row_2+1)
     open_req_btn = ttk.Button(root, text='View a previous request',
@@ -206,7 +250,7 @@ def window_layout():
     open_req_btn.grid(column=1, row=row_2+1)
     open_req_cb = ttk.Combobox(root, textvariable=req_option)
     open_req_cb.bind("<<ComboboxSelected>>", combo_callback)
-    open_req_cb.grid(column=2, row=row_2+1)
+    open_req_cb.grid(column=2, row=row_2+1, columnspan=3, sticky=W)
     selected_label = ttk.Label(root, text='None file or request selected')
     selected_label.grid(column=0, row=row_2+2, columnspan=5, sticky=W)
 
@@ -243,12 +287,14 @@ def window_layout():
     img_size_label = ttk.Label(root, text='Image size:')
     img_size_label.grid(column=4, row=row_4+1)
 
-    o_hist_canv = Canvas(root, bg='white', width=250, height=200)
-    o_hist_canv.create_text(70, 20, text='Original Histogram')
+    o_hist_canv = Canvas(root, borderwidth=5, relief=GROOVE, width=400,
+                         height=240)
     o_hist_canv.grid(column=0, row=row_4+2, columnspan=2, rowspan=2)
-    p_hist_canv = Canvas(root, bg='white', width=250, height=200)
-    p_hist_canv.create_text(70, 20, text='Processed Histogram')
+    o_hist_canv.create_text(70, 20, text='Original Histogram')
+    p_hist_canv = Canvas(root, borderwidth=5, relief=GROOVE, width=400,
+                         height=240)
     p_hist_canv.grid(column=2, row=row_4+2, columnspan=2, rowspan=2)
+    p_hist_canv.create_text(70, 20, text='Processed Histogram')
     disp_btn = ttk.Button(root, text='Display and compare images',
                           command=display_img)
     disp_btn.grid(column=4, row=row_4+3, sticky=S)

@@ -45,6 +45,7 @@ def process_img_handler():
     original_histograms = get_histograms(list_of_decoded_imgs)
     processed_histograms = get_histograms(list_of_processed_imgs)
     # Generate new request id. Request id is unique for every request
+
     new_id = generate_request_id()
     print('New request id is {}'.format(new_id))
     # Store data to db
@@ -52,8 +53,7 @@ def process_img_handler():
     # assemble return data
     data = {'request_id': new_id,
             'processed_img': list_of_processed_imgs_encoded,
-            'original_histograms': original_histograms,
-            'processed_histograms': processed_histograms,
+            'histograms': [],
             'time_uploaded': metadata['time_uploaded'],
             'time_to_process': metadata['time_to_process'],
             'img_size': metadata['img_size']
@@ -183,18 +183,14 @@ def retrieve_request_handler(username, request_id):
         return jsonify(error_messages[3]), 400
     elif request_file == 1:
         return jsonify(error_messages[4]), 400
+
     original_histograms = get_histograms(decode_imgs_from_request(request_file.uploaded))
     processed_histograms = get_histograms(decode_imgs_from_request(request_file.processed))
+
     data = {
         'original_img': request_file.uploaded,
         'processed_img': request_file.processed,
-        'original_histograms': original_histograms,
-        'processed_histograms': processed_histograms,
-        'filename': request_file.filename,
-        'procedure': request_file.procedure,
-        'time_uploaded': request_file.time_uploaded,
-        'time_to_process': request_file.time_to_process,
-        'img_size': request_file.img_size
+        'histograms': []
     }
     # return data
     return jsonify(data), 200
@@ -244,8 +240,8 @@ def previous_request_preview(username, previous_request_ids):
             'time_to_process': request_file.time_to_process,
             'img_size': request_file.img_size
         }
-    return data
-
+    # return data
+    return jsonify(data), 200
 
 def get_previous_requests(username):
     """Generates a list of previous request IDs given username
@@ -283,8 +279,8 @@ def user_metrics_handler(username):
             'user_creation_time': user_creation_time
             }
     # return data
-    return jsonify(data), 200
-
+    pass
+  
 
 def validate_previous_request(username):
     """Validates whether the user had any previous requests
@@ -392,7 +388,7 @@ def get_img_sizes(list_of_processed_imgs_encoded, img_format):
         img_sizes.append(new_tuple)
     return img_sizes
 
-
+  
 def get_histograms(img_list):
     """creates a histogram for each image in the list
 
@@ -413,6 +409,6 @@ def get_histograms(img_list):
         hist_list.append(histograms)
     return hist_list
 
-
+  
 if __name__ == '__main__':
     app.run()  # host="0.0.0.0"
