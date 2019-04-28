@@ -4,3 +4,4 @@ requests
 flask
 pymodm
 matplotlib
+scikit-image

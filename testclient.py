@@ -42,10 +42,10 @@ def local_load_filter_display(base64_string):
 
 
 def remote_filter_display(base64_string):
-    j = {'username': 'test001',
+    j = {'username': 'test088',
          'num_img': 1,
          'imgs': [base64_string],
-         'procedure': 'reverse_vid',
+         'procedure': 'histogram_eq',
          'img_format': 'JPG',
          'filename': 'airplane001.jpg'
          }
@@ -53,10 +53,24 @@ def remote_filter_display(base64_string):
     print(r.text)
     r = r.json()
     imgs = r['processed_img']
-    for i in imgs:
-        decoded_img = decode_b64(i, 'JPG')
-        plt.imshow(decoded_img)
-        plt.show()
+    original_img = decode_b64(base64_string, 'JPG')
+    decoded_img = decode_b64(imgs[0], 'JPG')
+    figure, axes = plt.subplots(3,2)
+    original_histograms = r['original_histograms'][0]
+    processed_histograms = r['processed_histograms'][0]
+    # ax[0,0].imshow(original_img)
+    # ax[0,1].imshow(decoded_img)
+    # ax[1,0].plot(original_histograms[0], original_histograms[1])
+    # ax[1,1].plot(processed_histograms[0], processed_histograms[1])
+    for c, c_color in enumerate(('red', 'green', 'blue')):
+        bins, img_hist = original_histograms[c_color]
+        axes[c, 0].plot(bins, img_hist)
+        axes[c, 0].set_ylabel(c_color)
+    for c, c_color in enumerate(('red', 'green', 'blue')):
+        bins, img_hist = processed_histograms[c_color]
+        axes[c, 1].plot(bins, img_hist)
+        axes[0, 1].set_title('Processed')
+    plt.show()
 
 
 def encode_b64(image):
@@ -83,6 +97,10 @@ def retrieve_past_request(username, request_id):
         ax[1].imshow(after_filtering)
         plt.show()
 
+def retrieve_metrics(username):
+    r = requests.get(address + "/api/user_metrics/" + username)
+    r = r.json()
+    print(r)
 
 if __name__ == '__main__':
     img_b64_string = read_file_as_b64("./images/airplane001.jpg")
@@ -101,3 +119,4 @@ if __name__ == '__main__':
     # This section tests get requests
     # view_past_requests('test002222')
     # retrieve_past_request('test001', '4')
+    # retrieve_metrics('test088')

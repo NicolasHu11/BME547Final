@@ -97,6 +97,7 @@ def window_layout():
                 img.append(str(img_b64b, encoding='utf-8'))
         return img_num, file_format, img
 
+
     def show_time(r_dict):
         t_upload = r_dict['time_uploaded'][0]
         t_process = r_dict['time_to_process'][0]

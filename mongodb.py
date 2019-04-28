@@ -33,10 +33,10 @@ class User(MongoModel):  # this means a collection in db
 
     last_image_uploaded = fields.CharField(blank=True)
     request_id = fields.ListField(blank=True)  # a list of str or int
-    
+
     # embedded documents
     requests = fields.EmbeddedDocumentListField(Requests)
-    
+
 
 
 def query_user(username):
@@ -158,20 +158,19 @@ def check_user(username):
 
 
 def query_user_metrics(username):
-    
+
     try:
         user = query_user(username)
     except:
         return 0  # user does not exist, return 0
-
-    return [getattr(user, num_actions), getattr(user, user_creation_time)]
+    return user.num_actions, user.user_creation_time
 
 
 def query_request_metadata(username, request_id):
     request = query_by_request_id(username, request_id)
 
     return [
-            getattr(request, time_uploaded),
-            getattr(request, time_processed),
-            getattr(request, img_size)
+            getattr(request, 'time_uploaded'),
+            getattr(request, 'time_processed'),
+            getattr(request, 'img_size')
             ]
