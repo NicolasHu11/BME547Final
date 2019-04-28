@@ -11,12 +11,13 @@ from matplotlib import figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, \
     NavigationToolbar2Tk
 import matplotlib.pyplot as plt
-
+import matplotlib.image as mpimg
 # import matplotlib.backends.tkagg as tkagg
 import requests
 import base64
 import io
 import os
+import shutil
 
 
 app = Flask(__name__)
@@ -27,7 +28,6 @@ def window_layout():
     global o_img, p_img, file_upload
     o_img = None
     p_img = None
-
     def get_user_metric():
         user_name = id_entry.get()
         if user_name == '':
@@ -88,19 +88,18 @@ def window_layout():
         else:
             with ZipFile(file_upload[0], 'r') as zip_file:
                 file_list = zip_file.namelist()
-            img_num = len(file_list)
-            for i in range(1, img_num):
-                file_name = file_upload[0].replace('.zip', '') + '/' + \
-                            file_list[i].split('/')[-1]
-                print(file_name)
-                file_format = file_name.split('.')[-1]
-                with open(file_name, 'rb') as image_file:
-                    img_b64b = base64.b64encode(image_file.read())
-                img.append(str(img_b64b, encoding='utf-8'))
+                img_num = len(file_list)
+                print(file_list)
+                for member in file_list:
+                    if member[0] != '_' and member[0] != '.':
+                        file_format = member.split('.')[-1]
+                        with zip_file.open(member) as image_file:
+                            img_b64b = base64.b64encode(image_file.read())
+                            img.append(str(img_b64b, encoding='utf-8'))
         return img_num, file_format, img
 
     def show_time(r_dict):
-        t_upload = r_dict['time_uploaded'][0]
+        t_upload = r_dict['time_uploaded']
         t_process = r_dict['time_to_process']
         img_size = r_dict['img_size'][0]
         t_up_label.config(text='Time uploaded: {}'.format(t_upload))
@@ -147,7 +146,15 @@ def window_layout():
         # root.mainloop()
 
     def start_p():
-        global o_img, p_img
+        global o_img, p_img, file_upload
+        try:
+            l = len(file_upload)
+            if l < 1:
+                raise NameError('error')
+        except NameError:
+            messagebox.showinfo('Error', 'Please select file')
+            return None
+
         img_num, file_format, o_img = unzip_encode_img()
         p_dict = {'filename': selected_label.cget('text').split('/')[-1],
                   'imgs': o_img,
@@ -155,7 +162,6 @@ def window_layout():
                   'num_img': img_num,
                   'procedure': p_method.get(),
                   'img_format': file_format}
-        print()
         r = requests.post(address + "/api/process_img", json=p_dict)
         result = r.json()
         if type(result) == dict:
@@ -189,27 +195,35 @@ def window_layout():
         return img
 
     def download_image(dl_format):
-        # global p_img
-        # os.mkdir('./Img')
-        # download_path = r'./Img'
-        # img_num = len(p_img)
-        # if img_num > 1:
-        #     os.mkdir('./temp/')
-        #     file_path = r'./temp/'
-        #     zip_file = ZipFile(download_path, 'w')
-        #     for i in range(img_num):
-        #         with open("./temp/Img{}.{}".format(i, dl_format), "wb") as \
-        #                 download_img:
-        #             download_img.write()
-        #         zip_file.write(file_path, "Img{}.{}".format(i, dl_format))
-        #     zip_file.close()
-        #     os.remove(file_path)
-        # else:
-        #     with open("./temp/Img.{}".format(dl_format), "wb") as download_img:
-        #         download_img.write()
-        # return dl_format
-        print('download function')
-        pass
+        global p_img
+        desired_name = fd.asksaveasfilename(initialdir=os.getcwd(),
+                                            title='Select directory'
+                                            )
+        if desired_name == '':
+            return dl_format
+        print(desired_name)
+        img_num = len(p_img)
+        if img_num > 1:
+            try:
+                os.mkdir('./temp/')
+            except FileExistsError:
+                print('temp folder already exists')
+            file_path = r'./temp/'
+            for i in range(img_num):
+                decoded = decode_b64(p_img[i], 'JPG')
+                temp_file_name = str(i) + '.' + dl_format.get()
+                mpimg.imsave(file_path + temp_file_name, decoded, format=dl_format.get().upper())
+            zip_file = ZipFile(desired_name + '.zip', 'w')
+            for i in range(img_num):
+                zip_file.write("./temp/{}.{}".format(i, dl_format.get()))
+            zip_file.close()
+            shutil.rmtree(file_path)
+        else:
+            one_img = p_img[0]
+            decoded = decode_b64(one_img, 'JPG')
+            final_file_name = desired_name + '.' + dl_format.get()
+            mpimg.imsave(final_file_name, decoded, format=dl_format.get().upper())
+        return dl_format
 
     def display_img():
         global o_img, p_img
@@ -228,7 +242,35 @@ def window_layout():
         p_img_canv.create_image(250, 200, image=p_img_first)
         disp_window.mainloop()
 
+    def decode_b64(base64_string, img_format):
+        """Decodes a single image from b64 format
 
+        Args:
+            base64_string (str): image before decoding
+            img_format (str): what format the string was encoded in
+
+        Returns:
+            ndarray: image in matrix form
+        """
+        image_bytes = base64.b64decode(base64_string)
+        image_buf = io.BytesIO(image_bytes)
+        return mpimg.imread(image_buf, format=img_format)
+
+    def encode_b64(image, img_format):
+        """Encodes a single image with b64
+
+        Args:
+            image (ndarray): image in matrix form
+            img_format (str): format to encode image
+
+        Returns:
+            str: encoded image
+        """
+        image_buf = io.BytesIO()
+        mpimg.imsave(image_buf, image, format=img_format)
+        image_buf.seek(0)
+        b64_bytes = base64.b64encode(image_buf.read())
+        return str(b64_bytes, encoding='utf-8')
     root = Tk()
     root.title('BME547 - Image Processing')
 
@@ -332,7 +374,7 @@ def window_layout():
     root.columnconfigure(4, minsize=170)
 
     root.mainloop()
-    return
+    # return
 
 
 if __name__ == "__main__":
