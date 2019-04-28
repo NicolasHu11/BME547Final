@@ -35,10 +35,13 @@ def hist_equal_filter(before_filtering):
 def local_load_filter_display(base64_string):
     img = decode_b64(base64_string, 'JPG')
     after_filtering = hist_equal_filter(img)
-    fig, ax = plt.subplots(1, 2)
-    ax[0].imshow(img)
-    ax[1].imshow(after_filtering)
+    fig, ax = plt.subplots(2, 2)
+    ax[0,0].imshow(img)
+    ax[0,1].imshow(after_filtering)
+    img_hist, img_bins = exposure.histogram(after_filtering)
+    ax[1,0].plot(img_bins, img_hist)
     plt.show()
+    print()
 
 
 def remote_filter_display(base64_string):
@@ -50,7 +53,7 @@ def remote_filter_display(base64_string):
          'filename': 'airplane001.jpg'
          }
     r = requests.post(address + "/api/process_img", json=j)
-    print(r.text)
+    # print(r.text)
     r = r.json()
     imgs = r['processed_img']
     original_img = decode_b64(base64_string, 'JPG')
@@ -112,7 +115,7 @@ if __name__ == '__main__':
     # reencoded_b64 = encode_b64(img)
     # print(reencoded_b64)
     # local_load_filter_display(img_b64_string)
-    # remote_filter_display(img_b64_string)
+    remote_filter_display(img_b64_string)
     # hist_equal_filter(img_b64_string)
     # save_b64_image(b64_string)
 
