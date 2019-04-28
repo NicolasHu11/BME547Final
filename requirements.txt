@@ -5,3 +5,5 @@ flask
 pymodm
 matplotlib
 scikit-image
+scipy
+dnspython
