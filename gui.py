@@ -1,18 +1,15 @@
 from tkinter import *
-from tkinter import ttk, messagebox
 from tkinter import filedialog as fd
-from flask import Flask
+from tkinter import ttk, messagebox
 from zipfile import ZipFile
-from PIL import Image, ImageTk
+
 import matplotlib as mpl
+from PIL import Image, ImageTk
+from flask import Flask
 mpl.use('TkAgg')
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib import figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, \
-    NavigationToolbar2Tk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-# import matplotlib.backends.tkagg as tkagg
 import requests
 import base64
 import io
@@ -25,10 +22,27 @@ address = "http://localhost:5000"
 
 
 def window_layout():
+    """ This function designs and shows the GUI window
+
+    This function determines the labels, buttons and figures that show on the
+    GUI window, along with their position, appearances and commands.
+
+    Returns:
+        None
+    """
     global o_img, p_img, file_upload
     o_img = None
     p_img = None
+
     def get_user_metric():
+        """ Callback function of 'Get my info' button
+
+        This function takes the entered user id and requests the user
+        information from server. If no user id entered, a message will show.
+
+        :return:
+            None
+        """
         user_name = id_entry.get()
         if user_name == '':
             messagebox.showinfo('Error', 'Please enter your user name.')
@@ -38,14 +52,29 @@ def window_layout():
         info_n = r.status_code
         if info_n == 200:
             t = user_metric['user_creation_time']
-            n = user_metric['num_actions']
+            n_h = user_metric['num_actions']['histogram_eq']
+            n_c = user_metric['num_actions']['contrast_str']
+            n_l = user_metric['num_actions']['log_compress']
+            n_r = user_metric['num_actions']['reverse_vid']
             messagebox.showinfo('Your Info', 'Time you created account:{} \n '
-                                             'Total actions: {}'.format(t, n))
+                                             'Histogram equalization: {} \n '
+                                             'Contras stretch: {} \n Log '
+                                             'compress: {} \n Reverse video: '
+                                             '{}'.format(t, n_h, n_c, n_l, n_r))
         else:
             messagebox.showinfo('Error', user_metric)
         return None
 
     def select_file():
+        """ Callback function of the 'Upload new image(s)'
+
+        This function allows the user to select one or more images or a zip
+        file to upload. The selected file name shows up on the window after
+        selecting.
+
+        Returns:
+            None
+        """
         global file_upload
         file_upload = list(fd.askopenfilenames())
         if file_upload:
@@ -56,6 +85,16 @@ def window_layout():
         return None
 
     def select_request():
+        """ Callback function of the 'View a previous request' button
+
+        This function takes entered user id and requests the user information
+        from server. It parse the returned information to options in the
+        drop down bar. If the user has no previous request, a message will
+        show.
+
+        Returns:
+            None
+        """
         user_name = id_entry.get()
         if user_name == '':
             messagebox.showinfo('Error', 'Please enter your user name.')
@@ -76,6 +115,17 @@ def window_layout():
         return None
 
     def unzip_encode_img():
+        """ This function encode images to pass to the server.
+
+        This function is called after the 'Start processing' button is clicked.
+        It encodes the selected image files and convert them to utf-8 string.
+        If the selected file is a zip folder, it unzip it to images first.
+
+        Returns:
+            int: the number of images
+            string: the format of the images
+            list: the encoded images
+        """
         global file_upload
         file_format = file_upload[0].split('.')[-1]
         img = []
@@ -99,15 +149,38 @@ def window_layout():
         return img_num, file_format, img
 
     def show_time(r_dict):
+        """ This function shows processing time information
+
+        This function is called after the 'Start processing' button is clicked,
+        and the processing result is returned. It takes the result and show the
+        information of time uploaded, time to process and image size.
+
+        Args:
+            r_dict (dict): returned information from the server
+        Returns；
+            None
+        """
         t_upload = r_dict['time_uploaded']
         t_process = r_dict['time_to_process']
         img_size = r_dict['img_size'][0]
         t_up_label.config(text='Time uploaded: {}'.format(t_upload))
-        t_pr_label.config(text='Time to process: {}'.format(t_process))
+        t_pr_label.config(text='Time to process: {} s'.format(t_process))
         img_size_label.config(text='Image size: {}*{}'.format(img_size[0],
                                                               img_size[1]))
+        return None
 
     def show_hist(r_dict):
+        """ This function shows histograms
+
+        This function is called after the 'Start processing' button is clicked,
+        and the processing result is returned. It takes the result tuple and
+        plot it on the window.
+
+        Args:
+            r_dict (dict): returned information from the server
+        Returns:
+            None
+        """
         o_hist = r_dict['original_histograms'][0]
         fig_o = plt.figure(figsize=(4, 2.4))
         fig_r1 = plt.subplot(3, 1, 1)
@@ -143,13 +216,22 @@ def window_layout():
         p_plot = FigureCanvasTkAgg(fig_p, root)
         p_plot.draw()
         p_plot._tkcanvas.grid(column=2, row=row_4 + 2, columnspan=2, rowspan=2)
-        # root.mainloop()
+        return None
 
     def start_p():
+        """ Callback function of the 'Start processing' button
+
+        This function encode the images, pass it to the server along with other
+        processing information, and takes the returned result. It then show or
+        plot the returned result.
+
+        Returns:
+            None
+        """
         global o_img, p_img, file_upload
         try:
-            l = len(file_upload)
-            if l < 1:
+            len_f = len(file_upload)
+            if len_f < 1:
                 raise NameError('error')
         except NameError:
             messagebox.showinfo('Error', 'Please select file')
@@ -173,6 +255,14 @@ def window_layout():
         return None
 
     def combo_callback(self):
+        """ Callback function of the drop down bar
+
+        This funtion shows the selected previous request. It passes the user id
+        and request id to the server, and show or plot the returned information.
+
+        Returns:
+             None
+        """
         global o_img, p_img
         request_name = open_req_cb.get()
         selected_label.config(text='{}'.format(request_name))
@@ -181,26 +271,54 @@ def window_layout():
         r = requests.get(
             address + "/api/retrieve_request/" + user_name + '/' + request_id)
         result = r.json()
-        p_method = result['procedure']
+        p_method.set(result['procedure'])
         selected_label.config(text=result['filename'])
         show_time(result)
         show_hist(result)
         o_img = result['original_img']
         p_img = result['processed_img']
+
         return None
 
     def decode_resize_img(img):
+        """ This function decode and resize images to show
+
+        This function takes the utf-8 string formatted images and decode it to
+        images that can be plotted. It also resizes them so that they fit the
+        window.
+
+        Args:
+            img (str): encoded images from the server
+
+        Returns:
+            PhotoImage: image to be plotted.
+        """
         img = Image.open(io.BytesIO(base64.b64decode(img)))
         img = ImageTk.PhotoImage(img.resize((500, 300)))
         return img
 
     def download_image(dl_format):
+        """ Callback function of the 'Download image(s)' button
+
+        This function allows user to select the folder where they would like to
+        download their processed images and name the image or zip file. If more
+        than one images is to be downloaded, they will be downloaded as zip.
+        User can select the format.
+
+        Args:
+            dl_format (string): user selected format to download the images
+
+        Returns:
+            None
+        """
         global p_img
+        if p_img is None:
+            messagebox.showinfo('Error', 'No image to download.')
+            return
         desired_name = fd.asksaveasfilename(initialdir=os.getcwd(),
-                                            title='Select directory'
-                                            )
+                                            title='Select directory')
         if desired_name == '':
-            return dl_format
+            return None
         print(desired_name)
         img_num = len(p_img)
         if img_num > 1:
@@ -212,7 +330,8 @@ def window_layout():
             for i in range(img_num):
                 decoded = decode_b64(p_img[i], 'JPG')
                 temp_file_name = str(i) + '.' + dl_format.get()
-                mpimg.imsave(file_path + temp_file_name, decoded, format=dl_format.get().upper())
+                mpimg.imsave(file_path + temp_file_name, decoded,
+                             format=dl_format.get().upper())
             zip_file = ZipFile(desired_name + '.zip', 'w')
             for i in range(img_num):
                 zip_file.write("./temp/{}.{}".format(i, dl_format.get()),
@@ -224,10 +343,21 @@ def window_layout():
             decoded = decode_b64(one_img, 'JPG')
             final_file_name = desired_name + '.' + dl_format.get()
             mpimg.imsave(final_file_name, decoded, format=dl_format.get().upper())
-        return dl_format
+        return None
 
     def display_img():
+        """ Callback function of the 'Display and compare images' button
+
+        This function uses a pop-up window to show the original image and
+        processed image.
+
+        Returns:
+            None
+        """
         global o_img, p_img
+        if o_img is None or p_img is None:
+            messagebox.showinfo('Error', 'No image to compare.')
+            return
         o_img_first = decode_resize_img(o_img[0])
         p_img_first = decode_resize_img(p_img[0])
         disp_window = Toplevel()
@@ -242,6 +372,7 @@ def window_layout():
         p_img_canv.grid(column=1, row=1)
         p_img_canv.create_image(250, 200, image=p_img_first)
         disp_window.mainloop()
+        return None
 
     def decode_b64(base64_string, img_format):
         """Decodes a single image from b64 format
@@ -365,7 +496,8 @@ def window_layout():
                                value='tiff')
     tiff_btn.grid(column=3, row=row_5+1)
 
-    d_btn = ttk.Button(root, text='Download', command=lambda i=d_format: download_image(i))
+    d_btn = ttk.Button(root, text='Download',
+                       command=lambda i=d_format: download_image(i))
     d_btn.grid(column=4, row=row_5+1)
 
     root.columnconfigure(0, minsize=170)
@@ -375,7 +507,7 @@ def window_layout():
     root.columnconfigure(4, minsize=170)
 
     root.mainloop()
-    # return
+    return
 
 
 if __name__ == "__main__":
