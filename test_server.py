@@ -139,7 +139,8 @@ def test_validate_process_img(sample_img_request):
 def test_store_new_request(sample_img_request, load_img):
     from server import store_new_request
 
-    db_data = store_new_request(sample_img_request, '1', [load_img], datetime.datetime.now())
+    db_data = store_new_request(sample_img_request, '1', [load_img],
+                                datetime.datetime.now())
     # just checking that the process time is very short
     assert db_data['time_to_process'] < 0.01
 

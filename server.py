@@ -13,8 +13,10 @@ error_messages = {1: 'Please put post request json in correct format',
                   2: 'Incorrect data types in request',
                   3: 'Username does not exist',
                   4: 'Request ID does not exist'}
-procedure_choices = ['histogram_eq', 'contrast_str', 'log_compress', 'reverse_vid']
-img_format_choices = ['JPG', 'JPEG', 'PNG', 'TIFF', 'jpg', 'jpeg', 'png', 'tiff']
+procedure_choices = ['histogram_eq', 'contrast_str', 'log_compress',
+                     'reverse_vid']
+img_format_choices = ['JPG', 'JPEG', 'PNG', 'TIFF',
+                      'jpg', 'jpeg', 'png', 'tiff']
 num_requests = 1
 
 
@@ -23,8 +25,8 @@ def process_img_handler():
     """Request handler for process_img
 
     Takes in one or multiple images, performs the request procedure and returns
-    the processed image along with meta data back. Only one file type and one procedure
-    is allowed for each request
+    the processed image along with meta data back. Only one file type and one
+    procedure is allowed for each request
 
     Returns:
         tuple: data in json form and status code
@@ -38,7 +40,8 @@ def process_img_handler():
     # decode image
     list_of_decoded_imgs = decode_imgs_from_request(r)
     # process individual image
-    list_of_processed_imgs = process_imgs_with_method(list_of_decoded_imgs, r['procedure'])
+    list_of_processed_imgs = process_imgs_with_method(list_of_decoded_imgs,
+                                                      r['procedure'])
     # encode image before sending it back
     list_of_processed_imgs_encoded = encode_imgs_b64(list_of_processed_imgs)
     # calculate histogram for original and processed image
@@ -48,7 +51,8 @@ def process_img_handler():
     new_id = generate_request_id()
     print('New request id is {}'.format(new_id))
     # Store data to db
-    metadata = store_new_request(r, new_id, list_of_processed_imgs_encoded, time_received)
+    metadata = store_new_request(r, new_id, list_of_processed_imgs_encoded,
+                                 time_received)
     # assemble return data
     data = {'request_id': new_id,
             'processed_img': list_of_processed_imgs_encoded,
@@ -109,7 +113,8 @@ def process_imgs_with_method(list_of_decoded_imgs, procedure):
             processed = exposure.equalize_hist(before_filtering)
         elif procedure == 'contrast_str':
             p2, p98 = np.percentile(before_filtering, (2, 98))
-            processed = exposure.rescale_intensity(before_filtering, in_range=(p2, p98))
+            processed = exposure.rescale_intensity(before_filtering,
+                                                   in_range=(p2, p98))
         elif procedure == 'log_compress':
             processed = exposure.adjust_log(before_filtering)
         else:
@@ -233,7 +238,8 @@ def previous_request_preview(username, previous_request_ids):
 
     Args:
         username (str): user initiating the request
-        previous_request_ids (list): each term is one of their request IDs in str format
+        previous_request_ids (list): each term is one of their request IDs in
+        str format
 
     Returns:
         dict: Keys are request IDs, each value is another dict with details
@@ -324,15 +330,16 @@ def get_user_metrics(username):
 def validate_process_img(r):
     """Validates request json for process_img
 
-    Verifies that all the required info is provided in the dict. Also confirms if
-    the procedure requested is allowed. upload image format is verified to see if
-    it is supported. num_imgs is checked to see if it's a number.
+    Verifies that all the required info is provided in the dict. Also confirms
+    if the procedure requested is allowed. upload image format is verified to
+    see if it is supported. num_imgs is checked to see if it's a number.
 
     Args:
         r (dict): request json from client
 
     Returns:
-        int: 1 if some information is missing or a non-supported procedure is requested
+        int: 1 if some information is missing or a non-supported procedure is
+            requested
             2 if some of the data type isn't correct
             0 otherwise
     """
@@ -345,7 +352,8 @@ def validate_process_img(r):
         filename = r['filename']
     except KeyError:
         return 1
-    if not ((procedure in procedure_choices) and (img_format in img_format_choices)):
+    if not ((procedure in procedure_choices) and
+            (img_format in img_format_choices)):
         return 1
     try:
         num_img = int(num_img)
@@ -354,13 +362,15 @@ def validate_process_img(r):
     return 0
 
 
-def store_new_request(r, request_id, list_of_processed_imgs_encoded, time_received):
+def store_new_request(r, request_id, list_of_processed_imgs_encoded,
+                      time_received):
     """Interfaces with the database to log new request
 
     Args:
         r (dict): original request json supplied with process_img request
         request_id (str): request id for this request
-        list_of_processed_imgs_encoded (list): each term is a b64 processed image
+        list_of_processed_imgs_encoded (list): each term is a b64 processed
+            image
         time_received (str): time when the request was received
 
     Returns:
@@ -371,8 +381,9 @@ def store_new_request(r, request_id, list_of_processed_imgs_encoded, time_receiv
         'processed': list_of_processed_imgs_encoded,
         'img_format': r['img_format'],
         'time_uploaded': time_received.strftime('%Y-%m-%d %H:%M:%S'),
-        'time_to_process': (datetime.datetime.now() - time_received).total_seconds(),
-        'img_size': get_img_sizes(list_of_processed_imgs_encoded, r['img_format']),
+        'time_to_process':
+            (datetime.datetime.now() - time_received).total_seconds(),
+        'img_size': get_img_sizes(list_of_processed_imgs_encoded, 'JPG'),
         'procedure': r['procedure'],
         'filename': r['filename']
     }
@@ -389,7 +400,8 @@ def get_img_sizes(list_of_processed_imgs_encoded, img_format):
         img_format (str): format of the images
 
     Returns:
-        list: each term is a tuple containing the width and height of each image
+        list: each term is a tuple containing the width and height of each
+        image
     """
     img_sizes = []
     for base64_string in list_of_processed_imgs_encoded:
@@ -408,7 +420,8 @@ def get_histograms(img_list):
     Returns:
         list: each entry in this list corresponds to a image from the img_list
             each entry is a dict with red, green, blue as keys
-            each key corresponds to a tuple that consist of two lists, bins and hist
+            each key corresponds to a tuple that consist of two lists, bins and
+            hist
     """
     hist_list = []
     for img in img_list:
