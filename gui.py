@@ -17,7 +17,6 @@ from flask import Flask
 mpl.use('TkAgg')
 
 
-
 app = Flask(__name__)
 address = "http://localhost:5000"
 
@@ -61,7 +60,8 @@ def window_layout():
                                              'Histogram equalization: {} \n '
                                              'Contras stretch: {} \n Log '
                                              'compress: {} \n Reverse video: '
-                                             '{}'.format(t, n_h, n_c, n_l, n_r))
+                                             '{}'.format(t,
+                                                         n_h, n_c, n_l, n_r))
         else:
             messagebox.showinfo('Error', user_metric)
         return None
@@ -259,7 +259,8 @@ def window_layout():
         """ Callback function of the drop down bar
 
         This funtion shows the selected previous request. It passes the user id
-        and request id to the server, and show or plot the returned information.
+        and request id to the server, and show or plot the returned
+        information.
 
         Returns:
              None
@@ -343,7 +344,8 @@ def window_layout():
             one_img = p_img[0]
             decoded = decode_b64(one_img, 'JPG')
             final_file_name = desired_name + '.' + dl_format.get()
-            mpimg.imsave(final_file_name, decoded, format=dl_format.get().upper())
+            mpimg.imsave(final_file_name, decoded,
+                         format=dl_format.get().upper())
         return None
 
     def display_img():
