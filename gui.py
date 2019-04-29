@@ -18,7 +18,7 @@ mpl.use('TkAgg')
 
 
 app = Flask(__name__)
-address = "http://localhost:5000"
+address = "http://vcm-9094.vm.duke.edu:5000"
 
 
 def window_layout():
