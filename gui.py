@@ -1,3 +1,11 @@
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import requests
+import base64
+import io
+import os
+import shutil
 from tkinter import *
 from tkinter import filedialog as fd
 from tkinter import ttk, messagebox
@@ -7,14 +15,7 @@ import matplotlib as mpl
 from PIL import Image, ImageTk
 from flask import Flask
 mpl.use('TkAgg')
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-import requests
-import base64
-import io
-import os
-import shutil
+
 
 
 app = Flask(__name__)
@@ -132,7 +133,7 @@ def window_layout():
         if file_format != 'zip':
             img_num = len(file_upload)
             for i in range(img_num):
-                with open(file_upload[0], 'rb') as image_file:
+                with open(file_upload[i], 'rb') as image_file:
                     img_b64b = base64.b64encode(image_file.read())
                 img.append(str(img_b64b, encoding='utf-8'))
         else:
